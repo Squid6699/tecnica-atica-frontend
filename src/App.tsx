@@ -1,4 +1,4 @@
-import { Product } from "./pages/Product"
+import { Product } from "./pages/Product/Product"
 
 function App() {
 

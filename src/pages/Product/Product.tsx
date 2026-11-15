@@ -1,13 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ProductosServices } from "../services/products.ts";
-import { type Product as ProductType } from "../services/products.ts";
-import { Card } from "../components/Card.tsx";
-import { Loading } from "../components/UI/Loading.tsx";
-import { formatCurrency } from "../utils/formatPrice.tsx";
-import { Button } from "../components/UI/Button.tsx";
-import { Input } from "../components/Input.tsx";
-import { Modal } from "../components/Modal.tsx";
+import { ProductosServices } from "../../services/products.ts";
+import { type Product as ProductType } from "../../services/products.ts";
+import { Card } from "../../components/Card.tsx";
+import { Loading } from "../../components/UI/Loading.tsx";
+import { formatCurrency } from "../../utils/formatPrice.tsx";
+import { Button } from "../../components/UI/Button.tsx";
 import { AxiosError } from "axios";
+import { ModalCrear, type NewProduct, type ProductFormErrors } from "./ModalCrear.tsx";
 
 export const Product = () => {
 
@@ -17,21 +16,8 @@ export const Product = () => {
         guardando: boolean;
         error: string | null;
         modalCrearAbierto: boolean;
-        errorCreando: {
-            errorGeneral?: string | null;
-            codigo: string | null;
-            nombre: string | null;
-            descripcion: string | null;
-            precio: string | null;
-            stock: string | null;
-        };
-        nuevoProducto: {
-            codigo: string;
-            nombre: string;
-            descripcion: string;
-            precio: number;
-            stock: number;
-        }
+        errorCreando: ProductFormErrors;
+        nuevoProducto: NewProduct;
     }
 
     const [state, setState] = useState<State>({
@@ -275,58 +261,14 @@ export const Product = () => {
                 </div>
             )}
 
-            <Modal
+            <ModalCrear
                 open={modalCrearAbierto}
-                title="Agregar producto"
                 onClose={closeAddModal}
-            >
-                <form className="flex flex-col gap-4" onSubmit={handleAddProduct}>
-                    {errorCreando.errorGeneral && (
-                        <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700" role="alert">
-                            {errorCreando.errorGeneral}
-                        </p>
-                    )}
-                    <Input label="Código" name="codigo" placeholder="Ej. ACA-001" error={errorCreando.codigo} onChange={handleInputChange} />
-                    <Input label="Nombre" name="nombre" placeholder="Nombre del producto" error={errorCreando.nombre} onChange={handleInputChange} />
-                    <Input
-                        label="Descripción"
-                        name="descripcion"
-                        placeholder="Describe el producto"
-                        error={errorCreando.descripcion}
-                        onChange={handleInputChange}
-                    />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <Input
-                            label="Precio"
-                            name="precio"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            error={errorCreando.precio}
-                            onChange={handleInputChange}
-                        />
-                        <Input
-                            label="Stock"
-                            name="stock"
-                            type="number"
-                            min="0"
-                            placeholder="0"
-                            error={errorCreando.stock}
-                            onChange={handleInputChange}
-                        />
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-2">
-                        <Button type="button" variant="secondary" onClick={closeAddModal}>
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={guardando}>
-                            {guardando ? "Guardando..." : "Guardar"}
-                        </Button>
-                    </div>
-                </form>
-            </Modal>
+                onSubmit={handleAddProduct}
+                onChange={handleInputChange}
+                errors={errorCreando}
+                saving={guardando}
+            />
         </main>
     )
 }
