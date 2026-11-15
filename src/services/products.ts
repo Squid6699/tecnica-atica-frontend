@@ -1,6 +1,5 @@
 import { Get } from "../plugins/axios";
 
-const API_URL = 'http://localhost:3000/api/products';
 
 export interface Product {
     id: number;
@@ -15,7 +14,7 @@ export interface Product {
 export const ProductosServices = {
 
     getAllProducts: async (): Promise<Product[]> => {
-        const response = await Get(API_URL);
+        const response = await Get("products");
         return response.data;
     }
 }

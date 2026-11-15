@@ -1,9 +1,9 @@
 import axios from "axios";
 
-const HOST = import.meta.env.VITE_API_HOST;
+const HOST = import.meta.env.VITE_HOST;
 
 export const api = axios.create({
-    baseURL: `${HOST}/api`,
+    baseURL: `${HOST}`,
     withCredentials: true,
 });
 
