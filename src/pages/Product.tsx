@@ -7,6 +7,7 @@ import { formatCurrency } from "../utils/formatPrice.tsx";
 import { Button } from "../components/UI/Button.tsx";
 import { Input } from "../components/Input.tsx";
 import { Modal } from "../components/Modal.tsx";
+import { AxiosError } from "axios";
 
 export const Product = () => {
 
@@ -52,7 +53,7 @@ export const Product = () => {
         }
     });
 
-    const {products, loading, error, modalCrearAbierto, errorCreando, nuevoProducto} = state;
+    const { products, loading, error, modalCrearAbierto, errorCreando, nuevoProducto } = state;
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -76,52 +77,123 @@ export const Product = () => {
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
-        setState({
-            ...state,
+
+        setState((prev) => ({
+            ...prev,
             nuevoProducto: {
-                ...nuevoProducto,
-                [name]: name === "precio" || name === "stock" ? parseFloat(value) : value,
-            }
-        });
-    }
+                ...prev.nuevoProducto,
+                [name]: name === "precio" || name === "stock"
+                    ? parseFloat(value)
+                    : value,
+            },
+            errorCreando: {
+                ...prev.errorCreando,
+                [name]: null,
+            },
+        }));
+    };
 
     const closeAddModal = () => {
         setState({ ...state, modalCrearAbierto: false, errorCreando: { codigo: null, nombre: null, descripcion: null, precio: null, stock: null }, nuevoProducto: { codigo: "", nombre: "", descripcion: "", precio: 0, stock: 0 } });
     };
 
-    const handleAddProduct = (event: FormEvent<HTMLFormElement>) => {
+    const handleAddProduct = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
+        setState((prev) => ({
+            ...prev,
+            errorCreando: {
+                codigo: null,
+                nombre: null,
+                descripcion: null,
+                precio: null,
+                stock: null
+            }
+        }));
+
         if (nuevoProducto.codigo.trim() === "") {
-            setState({
-                ...state,
-                errorCreando: { ...errorCreando, codigo: "El código es obligatorio." },
-            });
-            return;
+            setState((prev) => ({
+                ...prev,
+                errorCreando: {
+                    ...prev.errorCreando,
+                    codigo: "El código es obligatorio."
+                }
+            }));
         }
 
         if (nuevoProducto.nombre.trim() === "") {
-            setState({
-                ...state,
-                errorCreando: { ...errorCreando, nombre: "El nombre es obligatorio." },
-            });
-            return;
+            setState((prev) => ({
+                ...prev,
+                errorCreando: { ...prev.errorCreando, nombre: "El nombre es obligatorio." },
+            }));
         }
 
         if (nuevoProducto.precio <= 0) {
-            setState({
-                ...state,
-                errorCreando: { ...errorCreando, precio: "El precio debe ser mayor que cero." },
-            });
-            return;
+            setState((prev) => ({
+                ...prev,
+                errorCreando: { ...prev.errorCreando, precio: "El precio debe ser mayor que cero." },
+            }));
         }
 
         if (nuevoProducto.stock < 0) {
-            setState({
-                ...state,
-                errorCreando: { ...errorCreando, stock: "El stock no puede ser negativo." },
-            });
-            return;
+            setState((prev) => ({
+                ...prev,
+                errorCreando: { ...prev.errorCreando, stock: "El stock no puede ser negativo." },
+            }));
+        }
+
+        try {
+            const createProduct = await ProductosServices.createProduct(nuevoProducto);
+            if (createProduct) {
+                setState((prev) => ({
+                    ...prev,
+                    products: [...prev.products, createProduct],
+                    modalCrearAbierto: false,
+                    errorCreando: { codigo: null, nombre: null, descripcion: null, precio: null, stock: null },
+                    nuevoProducto: { codigo: "", nombre: "", descripcion: "", precio: 0, stock: 0 }
+                }));
+            }
+        } catch (error) {
+
+            if (error instanceof AxiosError) {
+                const response = error.response?.data.errors[0];
+
+                if (response.property === "codigo") {
+                    setState((prev) => ({
+                        ...prev,
+                        errorCreando: { ...prev.errorCreando, codigo: response.message },
+                    }));
+                }
+
+                if (response.property === "nombre") {
+                    setState((prev) => ({
+                        ...prev,
+                        errorCreando: { ...prev.errorCreando, nombre: response.message },
+                    }));
+                }
+
+                if (response.property === "descripcion") {
+                    setState((prev) => ({
+                        ...prev,
+                        errorCreando: { ...prev.errorCreando, descripcion: response.message },
+                    }));
+                }
+
+                if (response.property === "precio") {
+                    setState((prev) => ({
+                        ...prev,
+                        errorCreando: { ...prev.errorCreando, precio: response.message },
+                    }));
+                }
+
+                if (response.property === "stock") {
+                    setState((prev) => ({
+                        ...prev,
+                        errorCreando: { ...prev.errorCreando, stock: response.message },
+                    }));
+                }
+
+            }
         }
     };
 
@@ -165,11 +237,10 @@ export const Product = () => {
                                     </h3>
                                 </div>
                                 <span
-                                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                        product.disponible
-                                            ? "bg-primary text-secondary"
-                                            : "bg-gray-200 text-gray-600"
-                                    }`}
+                                    className={`rounded-full px-3 py-1 text-xs font-semibold ${product.disponible
+                                        ? "bg-primary text-secondary"
+                                        : "bg-gray-200 text-gray-600"
+                                        }`}
                                 >
                                     {product.disponible ? "Disponible" : "Agotado"}
                                 </span>
@@ -204,7 +275,7 @@ export const Product = () => {
                         label="Descripción"
                         name="descripcion"
                         placeholder="Describe el producto"
-                        error= {errorCreando.descripcion}
+                        error={errorCreando.descripcion}
                         onChange={handleInputChange}
                     />
                     <div className="grid gap-4 sm:grid-cols-2">
