@@ -7,6 +7,7 @@ import { formatCurrency } from "../../utils/formatPrice.tsx";
 import { Button } from "../../components/UI/Button.tsx";
 import { AxiosError } from "axios";
 import { ModalCrear, type NewProduct, type ProductFormErrors } from "./ModalCrear.tsx";
+import { ModalEliminar } from "./ModalEliminar.tsx";
 
 export const Product = () => {
 
@@ -16,6 +17,8 @@ export const Product = () => {
         guardando: boolean;
         error: string | null;
         modalCrearAbierto: boolean;
+        modalEliminarAbierto: boolean;
+        productoAEliminar: number | null;
         errorCreando: ProductFormErrors;
         nuevoProducto: NewProduct;
     }
@@ -26,6 +29,8 @@ export const Product = () => {
         guardando: false,
         error: null,
         modalCrearAbierto: false,
+        modalEliminarAbierto: false,
+        productoAEliminar: null,
         errorCreando: {
             errorGeneral: null,
             codigo: null,
@@ -43,7 +48,7 @@ export const Product = () => {
         }
     });
 
-    const { products, loading, error, modalCrearAbierto, errorCreando, nuevoProducto, guardando } = state;
+    const { products, loading, error, modalCrearAbierto, errorCreando, nuevoProducto, guardando, modalEliminarAbierto, productoAEliminar } = state;
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -195,6 +200,38 @@ export const Product = () => {
         }
     };
 
+    const handleDeleteProduct = async () => {
+        if (productoAEliminar === null) return;
+
+        try {
+            const deletedProduct = await ProductosServices.deleteProduct(productoAEliminar);
+            setState((prev) => ({
+                ...prev,
+                products: prev.products.filter(product => product.id !== deletedProduct.id),
+                modalEliminarAbierto: false,
+                productoAEliminar: null
+            }));
+        }catch (error) {
+            console.error("Error al eliminar el producto:", error);
+        }
+    }
+
+    const openDeleteModal = (productId: number) => {
+        setState((prev) => ({
+            ...prev,
+            modalEliminarAbierto: true,
+            productoAEliminar: productId
+        }));
+    };
+
+    const closeDeleteModal = () => {
+        setState((prev) => ({
+            ...prev,
+            modalEliminarAbierto: false,
+            productoAEliminar: null
+        }));
+    }
+
     return (
         <main className="mx-auto max-w-7xl px-6 py-10">
             <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -244,6 +281,7 @@ export const Product = () => {
                                     <Button
                                         variant="secondary"
                                         className="flex-1 px-3 py-2 text-sm"
+                                        onClick={() => openDeleteModal(product.id)}
                                     >
                                         Eliminar
                                     </Button>
@@ -293,6 +331,12 @@ export const Product = () => {
                 onChange={handleInputChange}
                 errors={errorCreando}
                 saving={guardando}
+            />
+
+            <ModalEliminar
+                open={modalEliminarAbierto}
+                onClose={closeDeleteModal}
+                onConfirm={handleDeleteProduct}
             />
         </main>
     )

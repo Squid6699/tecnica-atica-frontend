@@ -1,4 +1,4 @@
-import { Get, Post } from "../plugins/axios";
+import { Delete, Get, Post } from "../plugins/axios";
 
 
 export interface Product {
@@ -20,6 +20,11 @@ export const ProductosServices = {
 
     createProduct: async (product: Omit<Product, "id" | "disponible">): Promise<Product> => {
         const response = await Post("products", product);
+        return response.data;
+    },
+
+    deleteProduct: async (productId: number): Promise<Product> => {
+        const response = await Delete(`products/${productId}`);
         return response.data;
     }
 }
