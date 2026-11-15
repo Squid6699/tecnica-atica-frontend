@@ -14,9 +14,11 @@ export const Product = () => {
     interface State {
         products: ProductType[];
         loading: boolean;
+        guardando: boolean;
         error: string | null;
         modalCrearAbierto: boolean;
         errorCreando: {
+            errorGeneral?: string | null;
             codigo: string | null;
             nombre: string | null;
             descripcion: string | null;
@@ -35,9 +37,11 @@ export const Product = () => {
     const [state, setState] = useState<State>({
         products: [],
         loading: false,
+        guardando: false,
         error: null,
         modalCrearAbierto: false,
         errorCreando: {
+            errorGeneral: null,
             codigo: null,
             nombre: null,
             descripcion: null,
@@ -53,7 +57,7 @@ export const Product = () => {
         }
     });
 
-    const { products, loading, error, modalCrearAbierto, errorCreando, nuevoProducto } = state;
+    const { products, loading, error, modalCrearAbierto, errorCreando, nuevoProducto, guardando } = state;
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -94,7 +98,7 @@ export const Product = () => {
     };
 
     const closeAddModal = () => {
-        setState({ ...state, modalCrearAbierto: false, errorCreando: { codigo: null, nombre: null, descripcion: null, precio: null, stock: null }, nuevoProducto: { codigo: "", nombre: "", descripcion: "", precio: 0, stock: 0 } });
+        setState({ ...state, modalCrearAbierto: false, errorCreando: { errorGeneral: null, codigo: null, nombre: null, descripcion: null, precio: null, stock: null }, nuevoProducto: { codigo: "", nombre: "", descripcion: "", precio: 0, stock: 0 } });
     };
 
     const handleAddProduct = async (event: FormEvent<HTMLFormElement>) => {
@@ -102,7 +106,13 @@ export const Product = () => {
 
         setState((prev) => ({
             ...prev,
+            guardando: true
+        }));
+
+        setState((prev) => ({
+            ...prev,
             errorCreando: {
+                errorGeneral: null,
                 codigo: null,
                 nombre: null,
                 descripcion: null,
@@ -119,6 +129,7 @@ export const Product = () => {
                     codigo: "El código es obligatorio."
                 }
             }));
+            return;
         }
 
         if (nuevoProducto.nombre.trim() === "") {
@@ -126,6 +137,7 @@ export const Product = () => {
                 ...prev,
                 errorCreando: { ...prev.errorCreando, nombre: "El nombre es obligatorio." },
             }));
+            return;
         }
 
         if (nuevoProducto.precio <= 0) {
@@ -133,6 +145,7 @@ export const Product = () => {
                 ...prev,
                 errorCreando: { ...prev.errorCreando, precio: "El precio debe ser mayor que cero." },
             }));
+            return;
         }
 
         if (nuevoProducto.stock < 0) {
@@ -140,6 +153,7 @@ export const Product = () => {
                 ...prev,
                 errorCreando: { ...prev.errorCreando, stock: "El stock no puede ser negativo." },
             }));
+            return;
         }
 
         try {
@@ -149,50 +163,48 @@ export const Product = () => {
                     ...prev,
                     products: [...prev.products, createProduct],
                     modalCrearAbierto: false,
-                    errorCreando: { codigo: null, nombre: null, descripcion: null, precio: null, stock: null },
+                    guardando: false,
+                    errorCreando: { errorGeneral: null, codigo: null, nombre: null, descripcion: null, precio: null, stock: null },
                     nuevoProducto: { codigo: "", nombre: "", descripcion: "", precio: 0, stock: 0 }
                 }));
             }
         } catch (error) {
 
+            setState((prev) => ({
+                ...prev,
+                guardando: false
+            }));
+
             if (error instanceof AxiosError) {
-                const response = error.response?.data.errors[0];
 
-                if (response.property === "codigo") {
+                const status = error.response?.status;
+                const response = error.response?.data;
+
+                // Error de validación DTO
+                if (status === 400 && response.errors) {
+
+                    const validationErrors: Record<string, string> = {};
+
+                    response.errors.forEach((item: any) => {
+                        validationErrors[item.property] = item.message;
+                    });
+
                     setState((prev) => ({
                         ...prev,
-                        errorCreando: { ...prev.errorCreando, codigo: response.message },
+                        errorCreando: {
+                            ...prev.errorCreando,
+                            ...validationErrors
+                        }
                     }));
-                }
-
-                if (response.property === "nombre") {
+                } else {
                     setState((prev) => ({
                         ...prev,
-                        errorCreando: { ...prev.errorCreando, nombre: response.message },
+                        errorCreando: {
+                            ...prev.errorCreando,
+                            errorGeneral: response.message || 'Ocurrió un error al crear el producto.'
+                        }
                     }));
                 }
-
-                if (response.property === "descripcion") {
-                    setState((prev) => ({
-                        ...prev,
-                        errorCreando: { ...prev.errorCreando, descripcion: response.message },
-                    }));
-                }
-
-                if (response.property === "precio") {
-                    setState((prev) => ({
-                        ...prev,
-                        errorCreando: { ...prev.errorCreando, precio: response.message },
-                    }));
-                }
-
-                if (response.property === "stock") {
-                    setState((prev) => ({
-                        ...prev,
-                        errorCreando: { ...prev.errorCreando, stock: response.message },
-                    }));
-                }
-
             }
         }
     };
@@ -269,6 +281,11 @@ export const Product = () => {
                 onClose={closeAddModal}
             >
                 <form className="flex flex-col gap-4" onSubmit={handleAddProduct}>
+                    {errorCreando.errorGeneral && (
+                        <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700" role="alert">
+                            {errorCreando.errorGeneral}
+                        </p>
+                    )}
                     <Input label="Código" name="codigo" placeholder="Ej. ACA-001" error={errorCreando.codigo} onChange={handleInputChange} />
                     <Input label="Nombre" name="nombre" placeholder="Nombre del producto" error={errorCreando.nombre} onChange={handleInputChange} />
                     <Input
@@ -304,7 +321,9 @@ export const Product = () => {
                         <Button type="button" variant="secondary" onClick={closeAddModal}>
                             Cancelar
                         </Button>
-                        <Button type="submit">Guardar producto</Button>
+                        <Button type="submit" disabled={guardando}>
+                            {guardando ? "Guardando..." : "Guardar"}
+                        </Button>
                     </div>
                 </form>
             </Modal>
