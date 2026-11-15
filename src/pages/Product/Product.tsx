@@ -224,7 +224,32 @@ export const Product = () => {
             {!loading && !error && products.length > 0 && (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {products.map((product) => (
-                        <Card key={product.id} className="flex flex-col gap-4">
+                        <Card
+                            key={product.id}
+                            className="flex flex-col gap-4"
+                            footer={
+                                <>
+                                    <Button
+                                        variant="secondary"
+                                        className="flex-1 px-3 py-2 text-sm"
+                                    >
+                                        Detalles
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        className="flex-1 px-3 py-2 text-sm"
+                                    >
+                                        Editar
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        className="flex-1 px-3 py-2 text-sm"
+                                    >
+                                        Eliminar
+                                    </Button>
+                                </>
+                            }
+                        >
                             <div className="flex items-start justify-between gap-4">
                                 <div>
                                     <p className="text-xs font-medium uppercase tracking-wider text-primary/70">
