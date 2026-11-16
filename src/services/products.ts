@@ -19,10 +19,23 @@ export interface NewProduct {
     stock: number;
 }
 
+export interface PaginatedProducts {
+    data: Product[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
 export const ProductosServices = {
 
     getAllProducts: async (): Promise<Product[]> => {
         const response = await Get("products");
+        return response.data;
+    },
+
+    getPaginatedProducts: async (page: number): Promise<PaginatedProducts> => {
+        const response = await Get(`products/paginated?page=${page}`);
         return response.data;
     },
 

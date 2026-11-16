@@ -10,6 +10,7 @@ import { ModalCrear, type ProductFormErrors } from "./ModalCrear.tsx";
 import { ModalEliminar } from "./ModalEliminar.tsx";
 import { ModalEditar } from "./ModalEditar.tsx";
 import { ModalDetalles } from "./ModalDetalles.tsx";
+import { FooterPagination } from "../../components/FooterPagination.tsx";
 
 export const Product = () => {
 
@@ -30,6 +31,8 @@ export const Product = () => {
         cargandoDetalles: boolean;
         errorCreando: ProductFormErrors;
         nuevoProducto: NewProduct;
+        page: number;
+        totalPages: number;
     }
 
     const [state, setState] = useState<State>({
@@ -68,7 +71,9 @@ export const Product = () => {
             descripcion: "",
             precio: 0,
             stock: 0,
-        }
+        },
+        page: 1,
+        totalPages: 0,
     });
 
     const {
@@ -88,6 +93,8 @@ export const Product = () => {
         modalDetallesAbierto,
         productoDetalles,
         cargandoDetalles,
+        page,
+        totalPages,
     } = state;
 
     useEffect(() => {
@@ -95,20 +102,33 @@ export const Product = () => {
             setState((currentState) => ({ ...currentState, loading: true, error: null }));
 
             try {
-                const products = await ProductosServices.getAllProducts();
-                setState({ ...state, products, loading: false, error: null });
+                const paginatedProducts = await ProductosServices.getPaginatedProducts(page);
+                setState((currentState) => ({
+                    ...currentState,
+                    products: paginatedProducts.data,
+                    page: paginatedProducts.page,
+                    totalPages: paginatedProducts.totalPages,
+                    loading: false,
+                    error: null,
+                }));
             } catch {
-                setState({
-                    ...state,
+                setState((currentState) => ({
+                    ...currentState,
                     products: [],
                     loading: false,
                     error: "No se pudieron cargar los productos.",
-                });
+                }));
             }
         }
 
         fetchProducts();
-    }, []);
+    }, [page]);
+
+    const handlePageChange = (nextPage: number) => {
+        if (nextPage >= 1 && nextPage <= totalPages) {
+            setState((currentState) => ({ ...currentState, page: nextPage }));
+        }
+    };
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
@@ -154,11 +174,6 @@ export const Product = () => {
 
     const handleAddProduct = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-
-        setState((prev) => ({
-            ...prev,
-            guardando: true
-        }));
 
         setState((prev) => ({
             ...prev,
@@ -208,6 +223,10 @@ export const Product = () => {
         }
 
         try {
+            setState((prev) => ({
+                ...prev,
+                guardando: true
+            }));
             const createProduct = await ProductosServices.createProduct(nuevoProducto);
             if (createProduct) {
                 setState((prev) => ({
@@ -387,6 +406,7 @@ export const Product = () => {
             }));
             return;
         }
+
         if (!productoEditando.nombre.trim()) {
             setState((prev) => ({
                 ...prev,
@@ -394,6 +414,7 @@ export const Product = () => {
             }));
             return;
         }
+
         if (productoEditando.precio <= 0) {
             setState((prev) => ({
                 ...prev,
@@ -401,6 +422,7 @@ export const Product = () => {
             }));
             return;
         }
+
         if (productoEditando.stock < 0) {
             setState((prev) => ({
                 ...prev,
@@ -428,7 +450,7 @@ export const Product = () => {
                 precio: Number(productoEditando.precio),
                 stock: Number(productoEditando.stock)
             }
-            
+
             const updatedProduct = await ProductosServices.updateProduct(productoEditando.id, productData);
             setState((prev) => ({
                 ...prev,
@@ -503,71 +525,79 @@ export const Product = () => {
             )}
 
             {!loading && !error && products.length > 0 && (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {products.map((product) => (
-                        <Card
-                            key={product.id}
-                            className="flex flex-col gap-4"
-                            footer={
-                                <>
-                                    <Button
-                                        variant="secondary"
-                                        className="flex-1 px-3 py-2 text-sm"
-                                        onClick={() => openDetailsModal(product.id)}
+                <>
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {products.map((product) => (
+                            <Card
+                                key={product.id}
+                                className="flex flex-col gap-4"
+                                footer={
+                                    <>
+                                        <Button
+                                            variant="secondary"
+                                            className="flex-1 px-3 py-2 text-sm"
+                                            onClick={() => openDetailsModal(product.id)}
+                                        >
+                                            Detalles
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            className="flex-1 px-3 py-2 text-sm"
+                                            onClick={() => openEditModal(product.id)}
+                                        >
+                                            Editar
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            className="flex-1 px-3 py-2 text-sm"
+                                            onClick={() => openDeleteModal(product.id)}
+                                        >
+                                            Eliminar
+                                        </Button>
+                                    </>
+                                }
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-medium uppercase tracking-wider text-primary/70">
+                                            {product.codigo}
+                                        </p>
+                                        <h3 className="mt-1 text-xl font-bold text-primary">
+                                            {product.nombre}
+                                        </h3>
+                                    </div>
+                                    <span
+                                        className={`rounded-full px-3 py-1 text-xs font-semibold ${product.disponible
+                                            ? "bg-primary text-secondary"
+                                            : "bg-gray-200 text-gray-600"
+                                            }`}
                                     >
-                                        Detalles
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        className="flex-1 px-3 py-2 text-sm"
-                                        onClick={() => openEditModal(product.id)}
-                                    >
-                                        Editar
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        className="flex-1 px-3 py-2 text-sm"
-                                        onClick={() => openDeleteModal(product.id)}
-                                    >
-                                        Eliminar
-                                    </Button>
-                                </>
-                            }
-                        >
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <p className="text-xs font-medium uppercase tracking-wider text-primary/70">
-                                        {product.codigo}
-                                    </p>
-                                    <h3 className="mt-1 text-xl font-bold text-primary">
-                                        {product.nombre}
-                                    </h3>
+                                        {product.disponible ? "Disponible" : "Agotado"}
+                                    </span>
                                 </div>
-                                <span
-                                    className={`rounded-full px-3 py-1 text-xs font-semibold ${product.disponible
-                                        ? "bg-primary text-secondary"
-                                        : "bg-gray-200 text-gray-600"
-                                        }`}
-                                >
-                                    {product.disponible ? "Disponible" : "Agotado"}
-                                </span>
-                            </div>
 
-                            <p className="flex-1 text-gray-600">{product.descripcion}</p>
+                                <p className="flex-1 text-gray-600">{product.descripcion}</p>
 
-                            <div className="flex items-end justify-between border-t border-primary/20 pt-4">
-                                <div>
-                                    <p className="text-2xl font-bold text-primary">
-                                        {formatCurrency(product.precio)}
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                        Stock: {product.stock}
-                                    </p>
+                                <div className="flex items-end justify-between border-t border-primary/20 pt-4">
+                                    <div>
+                                        <p className="text-2xl font-bold text-primary">
+                                            {formatCurrency(product.precio)}
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                            Stock: {product.stock}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
+                            </Card>
+                        ))}
+                    </div>
+                    <FooterPagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                        disabled={loading}
+                    />
+                </>
             )}
 
             <ModalCrear
