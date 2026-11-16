@@ -1,78 +1,52 @@
-# React + TypeScript + Vite
+# Técnica Ática - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interfaz web para consultar y administrar el catálogo de productos. Está
+construida con React, TypeScript, Vite, Tailwind CSS y Axios.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Backend de Técnica Ática ejecutándose
 
-## React Compiler
+## Configuración
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+Instala las dependencias:
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+```bash
+npm install
+```
 
-## Expanding the ESLint configuration
+Crea un archivo `.env` en la raíz del frontend. `VITE_HOST` debe apuntar a la
+URL base del backend, incluyendo el prefijo de la API:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+```env
+VITE_HOST=http://localhost:3000/api/
+```
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+La aplicación usa Axios con credenciales habilitadas y consume las rutas
+`/products` del backend.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Ejecución
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# servidor de desarrollo
+npm run dev
+
+# compilación de producción
+npm run build
 
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+La aplicación se sirve normalmente en `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Funcionalidades
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Lista los productos disponibles en el catálogo.
+- Consulta el detalle de un producto.
+- Crea productos con código, nombre, descripción, precio y stock.
+- Edita los datos de un producto.
+- Elimina productos después de confirmación.
+- Muestra estados de carga y formatos de precio en la interfaz.
 
-```
+La pantalla principal está implementada en `src/pages/Product/Product.tsx`.
+Las llamadas HTTP se centralizan en `src/services/products.ts` y utilizan la
+URL configurada en `VITE_HOST`.
