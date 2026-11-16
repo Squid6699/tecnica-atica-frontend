@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ProductosServices } from "../../services/products.ts";
+import { ProductosServices, type NewProduct } from "../../services/products.ts";
 import { type Product as ProductType } from "../../services/products.ts";
 import { Card } from "../../components/Card.tsx";
 import { Loading } from "../../components/UI/Loading.tsx";
 import { formatCurrency } from "../../utils/formatPrice.tsx";
 import { Button } from "../../components/UI/Button.tsx";
 import { AxiosError } from "axios";
-import { ModalCrear, type NewProduct, type ProductFormErrors } from "./ModalCrear.tsx";
+import { ModalCrear, type ProductFormErrors } from "./ModalCrear.tsx";
 import { ModalEliminar } from "./ModalEliminar.tsx";
+import { ModalEditar } from "./ModalEditar.tsx";
 
 export const Product = () => {
 
@@ -19,6 +20,10 @@ export const Product = () => {
         modalCrearAbierto: boolean;
         modalEliminarAbierto: boolean;
         productoAEliminar: number | null;
+        modalEditarAbierto: boolean;
+        productoEditando: (NewProduct & { id: number }) | null;
+        errorEditando: ProductFormErrors;
+        editando: boolean;
         errorCreando: ProductFormErrors;
         nuevoProducto: NewProduct;
     }
@@ -31,6 +36,17 @@ export const Product = () => {
         modalCrearAbierto: false,
         modalEliminarAbierto: false,
         productoAEliminar: null,
+        modalEditarAbierto: false,
+        productoEditando: null,
+        errorEditando: {
+            errorGeneral: null,
+            codigo: null,
+            nombre: null,
+            descripcion: null,
+            precio: null,
+            stock: null,
+        },
+        editando: false,
         errorCreando: {
             errorGeneral: null,
             codigo: null,
@@ -48,7 +64,21 @@ export const Product = () => {
         }
     });
 
-    const { products, loading, error, modalCrearAbierto, errorCreando, nuevoProducto, guardando, modalEliminarAbierto, productoAEliminar } = state;
+    const {
+        products,
+        loading,
+        error,
+        modalCrearAbierto,
+        errorCreando,
+        nuevoProducto,
+        guardando,
+        modalEliminarAbierto,
+        productoAEliminar,
+        modalEditarAbierto,
+        productoEditando,
+        errorEditando,
+        editando,
+    } = state;
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -83,6 +113,26 @@ export const Product = () => {
             },
             errorCreando: {
                 ...prev.errorCreando,
+                [name]: null,
+            },
+        }));
+    };
+
+    const handleEditInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = event.target;
+
+        setState((prev) => ({
+            ...prev,
+            productoEditando: prev.productoEditando
+                ? {
+                    ...prev.productoEditando,
+                    [name]: name === "precio" || name === "stock"
+                        ? parseFloat(value)
+                        : value,
+                }
+                : null,
+            errorEditando: {
+                ...prev.errorEditando,
                 [name]: null,
             },
         }));
@@ -211,7 +261,7 @@ export const Product = () => {
                 modalEliminarAbierto: false,
                 productoAEliminar: null
             }));
-        }catch (error) {
+        } catch (error) {
             console.error("Error al eliminar el producto:", error);
         }
     }
@@ -231,6 +281,159 @@ export const Product = () => {
             productoAEliminar: null
         }));
     }
+
+    const openEditModal = async (productId: number) => {
+        setState((prev) => ({
+            ...prev, editando: true,
+            errorEditando: {
+                errorGeneral: null, codigo: null, nombre: null, descripcion: null, precio: null, stock: null,
+            },
+            modalEditarAbierto: true,
+            productoEditando: null
+        }));
+
+        try {
+            const product = await ProductosServices.getProductById(productId);
+            setState((prev) => ({
+                ...prev,
+                modalEditarAbierto: true,
+                editando: false,
+                productoEditando: product,
+            }));
+        } catch {
+            setState((prev) => ({
+                ...prev,
+                editando: false,
+                errorEditando: {
+                    ...prev.errorEditando,
+                    errorGeneral: "No se pudo cargar el producto para editarlo.",
+                },
+            }));
+        }
+    };
+
+    const closeEditModal = () => {
+        setState((prev) => ({
+            ...prev,
+            modalEditarAbierto: false,
+            productoEditando: null,
+            errorEditando: {
+                errorGeneral: null, codigo: null, nombre: null, descripcion: null, precio: null, stock: null,
+            },
+        }));
+    };
+
+    const handleEditProduct = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!productoEditando) return;
+
+        setState((prev) => ({
+            ...prev,
+            errorEditando: {
+                errorGeneral: null,
+                codigo: null,
+                nombre: null,
+                descripcion: null,
+                precio: null,
+                stock: null
+            }
+        }));
+
+        if (!productoEditando.codigo.trim()) {
+            setState((prev) => ({
+                ...prev,
+                errorEditando: { ...prev.errorEditando, codigo: "El código es obligatorio." }
+            }));
+            return;
+        }
+        if (!productoEditando.nombre.trim()) {
+            setState((prev) => ({
+                ...prev,
+                errorEditando: { ...prev.errorEditando, nombre: "El nombre es obligatorio." }
+            }));
+            return;
+        }
+        if (productoEditando.precio <= 0) {
+            setState((prev) => ({
+                ...prev,
+                errorEditando: { ...prev.errorEditando, precio: "El precio debe ser mayor que cero." }
+            }));
+            return;
+        }
+        if (productoEditando.stock < 0) {
+            setState((prev) => ({
+                ...prev,
+                errorEditando: { ...prev.errorEditando, stock: "El stock no puede ser negativo." }
+            }));
+            return;
+        }
+
+        setState((prev) => ({
+            ...prev,
+            editando: true,
+            errorEditando: {
+                errorGeneral: null,
+                codigo: null,
+                nombre: null,
+                descripcion: null,
+                precio: null,
+                stock: null
+            }
+        }));
+
+        try {
+            const productData = {
+                ...productoEditando,
+                precio: Number(productoEditando.precio),
+                stock: Number(productoEditando.stock)
+            }
+            
+            const updatedProduct = await ProductosServices.updateProduct(productoEditando.id, productData);
+            setState((prev) => ({
+                ...prev,
+                products: prev.products.map((product) =>
+                    product.id === updatedProduct.id ? updatedProduct : product
+                ),
+                modalEditarAbierto: false,
+                productoEditando: null,
+                editando: false,
+            }));
+        } catch (error) {
+            setState((prev) => ({
+                ...prev,
+                editando: false
+            }));
+
+            if (error instanceof AxiosError) {
+                const status = error.response?.status;
+                const response = error.response?.data;
+
+                if (status === 400 && response.errors) {
+                    const validationErrors: Record<string, string> = {};
+
+                    response.errors.forEach((item: any) => {
+                        validationErrors[item.property] = item.message;
+                    });
+
+                    setState((prev) => ({
+                        ...prev,
+                        errorEditando: {
+                            ...prev.errorEditando,
+                            ...validationErrors
+                        }
+                    }));
+                } else {
+                    setState((prev) => ({
+                        ...prev,
+                        errorEditando: {
+                            ...prev.errorEditando,
+                            errorGeneral: response.message || "Ocurrió un error al editar el producto."
+                        }
+                    }));
+                }
+            }
+        }
+    };
 
     return (
         <main className="mx-auto max-w-7xl px-6 py-10">
@@ -275,6 +478,7 @@ export const Product = () => {
                                     <Button
                                         variant="secondary"
                                         className="flex-1 px-3 py-2 text-sm"
+                                        onClick={() => openEditModal(product.id)}
                                     >
                                         Editar
                                     </Button>
@@ -337,6 +541,17 @@ export const Product = () => {
                 open={modalEliminarAbierto}
                 onClose={closeDeleteModal}
                 onConfirm={handleDeleteProduct}
+            />
+
+            <ModalEditar
+                open={modalEditarAbierto}
+                product={productoEditando}
+                onClose={closeEditModal}
+                onSubmit={handleEditProduct}
+                onChange={handleEditInputChange}
+                errors={errorEditando}
+                saving={editando}
+                loading={editando && productoEditando === null}
             />
         </main>
     )

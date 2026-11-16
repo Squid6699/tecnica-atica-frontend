@@ -3,14 +3,6 @@ import { Button } from "../../components/UI/Button.tsx";
 import { Input } from "../../components/Input.tsx";
 import { Modal } from "../../components/Modal.tsx";
 
-export interface NewProduct {
-    codigo: string;
-    nombre: string;
-    descripcion: string;
-    precio: number;
-    stock: number;
-}
-
 export interface ProductFormErrors {
     errorGeneral?: string | null;
     codigo: string | null;

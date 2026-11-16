@@ -1,4 +1,4 @@
-import { Delete, Get, Post } from "../plugins/axios";
+import { Delete, Get, Post, Put } from "../plugins/axios";
 
 
 export interface Product {
@@ -11,6 +11,14 @@ export interface Product {
     disponible: boolean;
 }
 
+export interface NewProduct {
+    codigo: string;
+    nombre: string;
+    descripcion: string;
+    precio: number;
+    stock: number;
+}
+
 export const ProductosServices = {
 
     getAllProducts: async (): Promise<Product[]> => {
@@ -18,8 +26,18 @@ export const ProductosServices = {
         return response.data;
     },
 
+    getProductById: async (productId: number): Promise<Product> => {
+        const response = await Get(`products/${productId}`);
+        return response.data;
+    },
+
     createProduct: async (product: Omit<Product, "id" | "disponible">): Promise<Product> => {
         const response = await Post("products", product);
+        return response.data;
+    },
+
+    updateProduct: async (productId: number, product: Omit<Product, "id" | "disponible">): Promise<Product> => {
+        const response = await Put(`products/${productId}`, product);
         return response.data;
     },
 
