@@ -9,6 +9,7 @@ import { AxiosError } from "axios";
 import { ModalCrear, type ProductFormErrors } from "./ModalCrear.tsx";
 import { ModalEliminar } from "./ModalEliminar.tsx";
 import { ModalEditar } from "./ModalEditar.tsx";
+import { ModalDetalles } from "./ModalDetalles.tsx";
 
 export const Product = () => {
 
@@ -24,6 +25,9 @@ export const Product = () => {
         productoEditando: (NewProduct & { id: number }) | null;
         errorEditando: ProductFormErrors;
         editando: boolean;
+        modalDetallesAbierto: boolean;
+        productoDetalles: ProductType | null;
+        cargandoDetalles: boolean;
         errorCreando: ProductFormErrors;
         nuevoProducto: NewProduct;
     }
@@ -47,6 +51,9 @@ export const Product = () => {
             stock: null,
         },
         editando: false,
+        modalDetallesAbierto: false,
+        productoDetalles: null,
+        cargandoDetalles: false,
         errorCreando: {
             errorGeneral: null,
             codigo: null,
@@ -78,6 +85,9 @@ export const Product = () => {
         productoEditando,
         errorEditando,
         editando,
+        modalDetallesAbierto,
+        productoDetalles,
+        cargandoDetalles,
     } = state;
 
     useEffect(() => {
@@ -282,6 +292,37 @@ export const Product = () => {
         }));
     }
 
+    const openDetailsModal = async (productId: number) => {
+        setState((prev) => ({
+            ...prev,
+            modalDetallesAbierto: true,
+            productoDetalles: null,
+            cargandoDetalles: true,
+        }));
+
+        try {
+            const product = await ProductosServices.getProductById(productId);
+            setState((prev) => ({
+                ...prev,
+                productoDetalles: product,
+                cargandoDetalles: false,
+            }));
+        } catch {
+            setState((prev) => ({
+                ...prev,
+                cargandoDetalles: false,
+            }));
+        }
+    };
+
+    const closeDetailsModal = () => {
+        setState((prev) => ({
+            ...prev,
+            modalDetallesAbierto: false,
+            productoDetalles: null,
+        }));
+    };
+
     const openEditModal = async (productId: number) => {
         setState((prev) => ({
             ...prev, editando: true,
@@ -472,6 +513,7 @@ export const Product = () => {
                                     <Button
                                         variant="secondary"
                                         className="flex-1 px-3 py-2 text-sm"
+                                        onClick={() => openDetailsModal(product.id)}
                                     >
                                         Detalles
                                     </Button>
@@ -552,6 +594,13 @@ export const Product = () => {
                 errors={errorEditando}
                 saving={editando}
                 loading={editando && productoEditando === null}
+            />
+
+            <ModalDetalles
+                open={modalDetallesAbierto}
+                product={productoDetalles}
+                loading={cargandoDetalles}
+                onClose={closeDetailsModal}
             />
         </main>
     )
